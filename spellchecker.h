@@ -18,6 +18,8 @@ public:
     explicit SpellChecker(QTextDocument *parent = nullptr);
     ~SpellChecker();
 
+    QStringList spellingSuggestions(const QString& word);
+
 protected:
     void highlightBlock(const QString &text) override;
 

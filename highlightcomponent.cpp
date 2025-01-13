@@ -22,10 +22,14 @@ void HighlightComponent::onCompleted()
 
     // Init SpellChecker
     if (document)
-    {
         _highlight = std::make_unique<SpellChecker>(document);
-    }
+}
 
+QStringList HighlightComponent::fetchSuggestions(const QString& word)
+{
+    if (_highlight)
+        return _highlight->spellingSuggestions(word);
+    return QStringList();
 }
 
 void HighlightComponent::registerQmlType()

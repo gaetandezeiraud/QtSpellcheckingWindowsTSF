@@ -36,6 +36,7 @@ public:
     }
 
     Q_INVOKABLE void onCompleted();
+    Q_INVOKABLE QStringList fetchSuggestions(const QString& word);
 
 signals:
     void textChanged();

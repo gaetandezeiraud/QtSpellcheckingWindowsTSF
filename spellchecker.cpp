@@ -32,6 +32,27 @@ SpellChecker::~SpellChecker()
     CoUninitialize();
 }
 
+QStringList SpellChecker::spellingSuggestions(const QString& word)
+{
+    QStringList suggestionList;
+    ComPtr<IEnumString> suggestions;
+    HRESULT hr = _spellChecker->Suggest(word.toStdWString().c_str(), &suggestions);
+    if (SUCCEEDED(hr) && suggestions)
+    {
+        LPOLESTR suggestion = nullptr;
+        while (suggestions->Next(1, &suggestion, nullptr) == S_OK)
+        {
+            suggestionList.append(QString::fromWCharArray(suggestion));
+            CoTaskMemFree(suggestion); // Free the memory allocated for the suggestion
+
+            if (suggestionList.count() >= 4)
+                break;  // Exit the loop once 4 suggestions have been retrieved
+        }
+    }
+
+    return suggestionList;
+}
+
 void SpellChecker::highlightBlock(const QString &text)
 {
     highlightImmediateWords(text);
@@ -39,7 +60,9 @@ void SpellChecker::highlightBlock(const QString &text)
     if (text.endsWith(' ')
         || text.endsWith('.')
         || text.endsWith('!')
-        || text.endsWith('?'))
+        || text.endsWith('?')
+        || text.endsWith(':')
+        || text.endsWith(','))
     {
         checkSpelling();
     }
