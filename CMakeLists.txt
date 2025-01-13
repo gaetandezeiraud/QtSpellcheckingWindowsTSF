@@ -11,6 +11,7 @@ qt_standard_project_setup(REQUIRES 6.5)
 qt_add_executable(appQtSpellcheckingWindowsTSF
     main.cpp
     spellchecker.h spellchecker.cpp
+    highlightcomponent.h highlightcomponent.cpp
 )
 
 qt_add_qml_module(appQtSpellcheckingWindowsTSF
