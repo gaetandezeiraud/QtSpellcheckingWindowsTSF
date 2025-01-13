@@ -36,7 +36,14 @@ QStringList SpellChecker::spellingSuggestions(const QString& word)
 {
     QStringList suggestionList;
     ComPtr<IEnumString> suggestions;
-    HRESULT hr = _spellChecker->Suggest(word.toStdWString().c_str(), &suggestions);
+    ComPtr<IEnumSpellingError> spellingErrors;
+    ComPtr<ISpellingError> error;
+
+    // Check if the word has an error, if not, just stop here
+    HRESULT hr = _spellChecker->Check(word.toStdWString().c_str(), &spellingErrors);
+    if (FAILED(hr) || spellingErrors->Next(&error) != S_OK) return QStringList();
+
+    hr = _spellChecker->Suggest(word.toStdWString().c_str(), &suggestions);
     if (SUCCEEDED(hr) && suggestions)
     {
         LPOLESTR suggestion = nullptr;

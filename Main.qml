@@ -1,5 +1,5 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Controls
 import HighlightComponent 1.0
 
 Window {
@@ -25,22 +25,34 @@ Window {
                 ListModel {
                     id: suggestions
                 }
+                property int start: 0
+                property int end: 0
 
-                Repeater{
+                Instantiator {
                     model: suggestions
+
                     MenuItem {
-                        text: newWord
+                        text: model.newWord
                         onTriggered: () => {
-                            const start = textArea.selectionStart
-                            const end = textArea.selectionEnd
-                            textArea.remove(start, end)
-                            textArea.insert(textArea.cursorPosition, newWord)
+                            if (textArea.selectedText.length > 0)
+                            {
+                                menu.start = textArea.selectionStart
+                                menu.end = textArea.selectionEnd
+                            }
+                            textArea.remove(menu.start, menu.end)
+                            textArea.insert(menu.start, model.newWord)
                             menu.close()
                         }
                     }
+
+                    onObjectAdded: function(index, object) {
+                        menu.insertItem(index, object)
+                    }
+                    onObjectRemoved: function(index, object) {
+                        menu.removeItem(object)
+                    }
                 }
 
-                /*
                 MenuSeparator {}
 
                 MenuItem {
@@ -55,18 +67,54 @@ Window {
                     text: "Paste"
                     onTriggered: textArea.paste()
                 }
-                */
             }
 
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.RightButton
+
+                function isWordBoundary(charBoundary) {
+                    return charBoundary === " " || charBoundary === "\t" || charBoundary === "\n" || /[.,!?;:'"(){}[\]]/.test(charBoundary);
+                }
+
                 onClicked: (mouse) => {
+                    menu.start = 0
+                    menu.end = 0
+
                     // Fetch spellchecker suggestion(s)
                     if (textArea.selectedText.length > 0)
                     {
                         suggestions.clear()
                         var tempSuggestions = highlighthandler.fetchSuggestions(textArea.selectedText);
+                        tempSuggestions.forEach(i => suggestions.append({newWord: i}))
+                    }
+                    // Very naive implementation, don't use it on a very long text
+                    // Allow a simple right click on a word, without selection
+                    else
+                    {
+                        var pos = textArea.positionAt(mouse.x, mouse.y)
+                        var fullText = textArea.text;
+
+                        // Find start of the word
+                        let start = pos;
+                        while (start > 0 && !isWordBoundary(fullText[start - 1])) {
+                            start--;
+                        }
+
+                        // Find end of the word
+                        let end = pos;
+                        while (end < fullText.length && !isWordBoundary(fullText[end])) {
+                            end++;
+                        }
+
+                        // Extract the word
+                        let word = fullText.substring(start, end);
+                        menu.start = start
+                        menu.end = end
+
+                        suggestions.clear()
+                        var tempSuggestions = highlighthandler.fetchSuggestions(word);
+                        if (tempSuggestions.length === 0) return // Cancel if no suggestions are available, nothing to show in the menu
                         tempSuggestions.forEach(i => suggestions.append({newWord: i}))
                     }
 
