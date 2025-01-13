@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import SpellChecker 1.0
+import HighlightComponent 1.0
 
 Window {
     width: 640
@@ -8,17 +8,21 @@ Window {
     visible: true
     title: qsTr("SpellChecker Window")
 
-    SpellChecker {
-        id: spellChecker
-    }
-
-    TextArea {
-        id: textArea
+    ScrollView {
         anchors.fill: parent
-        onTextChanged: {
-            let errors = spellChecker.checkSpelling(text);
-            for (let error of errors) {
-                console.log("Error at", error.start, "length", error.length, "Suggestions:", error.suggestions);
+
+        TextArea {
+            focus: true
+            wrapMode: TextEdit.Wrap
+            textFormat: TextEdit.RichText
+            font.pixelSize: 16
+
+            placeholderText: qsTr("Enter text")
+            text: highlighthandler.text
+
+            HighlightComponent {
+                id: highlighthandler
+                Component.onCompleted: onCompleted()
             }
         }
     }

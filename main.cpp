@@ -1,13 +1,13 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include "spellchecker.h"
+#include "highlightcomponent.h"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;
-    qmlRegisterType<SpellChecker>("SpellChecker", 1, 0, "SpellChecker");
+    HighlightComponent::registerQmlType();
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,
