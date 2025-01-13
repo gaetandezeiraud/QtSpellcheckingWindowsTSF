@@ -1,6 +1,9 @@
 #include "spellchecker.h"
 
-SpellChecker::SpellChecker(QTextDocument *parent) : QSyntaxHighlighter(parent)
+#include <QRegularExpression>
+
+SpellChecker::SpellChecker(QTextDocument *parent)
+    : QSyntaxHighlighter(parent)
 {
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(hr))
@@ -31,10 +34,25 @@ SpellChecker::~SpellChecker()
 
 void SpellChecker::highlightBlock(const QString &text)
 {
+    highlightImmediateWords(text);
+
+    if (text.endsWith(' ')
+        || text.endsWith('.')
+        || text.endsWith('!')
+        || text.endsWith('?'))
+    {
+        checkSpelling();
+    }
+    _currentText = text;
+}
+
+
+void SpellChecker::checkSpelling()
+{
     QTextDocument *doc = this->document();  // Access the QTextDocument from QML
 
     ComPtr<IEnumSpellingError> spellingErrors;
-    HRESULT hr = _spellChecker->Check(text.toStdWString().c_str(), &spellingErrors);
+    HRESULT hr = _spellChecker->Check(_currentText.toStdWString().c_str(), &spellingErrors);
     if (FAILED(hr)) return;
 
     ComPtr<ISpellingError> error;
@@ -42,87 +60,52 @@ void SpellChecker::highlightBlock(const QString &text)
     {
         ULONG startIndex, length;
         HRESULT hr = error->get_StartIndex(&startIndex);
-        if (FAILED(hr))
-        {
-            qWarning("Failed to get start index");
-            return; // Or handle appropriately
-        }
+        if (FAILED(hr)) continue;
 
         hr = error->get_Length(&length);
-        if (FAILED(hr))
-        {
-            qWarning("Failed to get length");
-            return; // Or handle appropriately
-        }
+        if (FAILED(hr)) continue;
 
         // Apply the highlight
-        if (startIndex >= 0 && startIndex + length <= text.length())
+        if (startIndex >= 0 && startIndex + length <= _currentText.length())
             setFormat(startIndex, length, _errorFormat);
-       setCurrentBlockState(0);  // Clear previous block state if any
     }
+
+    setCurrentBlockState(0);  // Clear previous block state if any
 }
 
-/*
-QVariantList SpellChecker::checkSpelling(const QString &text)
+void SpellChecker::highlightImmediateWords(const QString &text)
 {
-    QVariantList errors;
-    if (!_spellChecker) return errors;
+    // Split the text into words
+    QStringList words = text.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
 
-    ComPtr<IEnumSpellingError> spellingErrors;
-    HRESULT hr = _spellChecker->Check(text.toStdWString().c_str(), &spellingErrors);
-    if (FAILED(hr)) return errors;
-
-    ComPtr<ISpellingError> error;
-    while (spellingErrors->Next(&error) == S_OK)
+    // Process each word (excluding the last incomplete one if no space is present)
+    for (int i = 0; i < words.size() - (text.endsWith(' ') ? 0 : 1); ++i)
     {
-        ULONG startIndex, length;
-        CORRECTIVE_ACTION action;
-        HRESULT hr = error->get_StartIndex(&startIndex);
-        if (FAILED(hr))
-        {
-            qWarning("Failed to get start index");
-            return errors; // Or handle appropriately
-        }
+        QString word = words[i];
 
-        hr = error->get_Length(&length);
-        if (FAILED(hr))
-        {
-            qWarning("Failed to get length");
-            return errors; // Or handle appropriately
-        }
+        // Spell-check and highlight the word
+        ComPtr<IEnumSpellingError> spellingErrors;
+        HRESULT hr = _spellChecker->Check(word.toStdWString().c_str(), &spellingErrors);
+        if (FAILED(hr)) continue;
 
-        hr = error->get_CorrectiveAction(&action);
-        if (FAILED(hr))
+        ComPtr<ISpellingError> error;
+        while (spellingErrors->Next(&error) == S_OK)
         {
-            qWarning("Failed to get corrective action");
-            return errors; // Or handle appropriately
-        }
+            ULONG startIndex, length;
+            HRESULT hr = error->get_StartIndex(&startIndex);
+            if (FAILED(hr)) continue;
 
-        QVariantMap errorInfo;
-        errorInfo["start"] = static_cast<int>(startIndex);
-        errorInfo["length"] = static_cast<int>(length);
+            hr = error->get_Length(&length);
+            if (FAILED(hr)) continue;
 
-        if (action == CORRECTIVE_ACTION_GET_SUGGESTIONS)
-        {
-            ComPtr<IEnumString> suggestions;
-            HRESULT hr = _spellChecker->Suggest(getMisspelledWord(text, startIndex, length).toStdWString().c_str(), &suggestions);
-            if (SUCCEEDED(hr) && suggestions)
-            {
-                LPOLESTR suggestion = nullptr;
-                QStringList suggestionList;
-                while (suggestions->Next(1, &suggestion, nullptr) == S_OK)
-                {
-                    suggestionList.append(QString::fromWCharArray(suggestion));
-                    CoTaskMemFree(suggestion); // Free the memory allocated for the suggestion
-                }
-                errorInfo["suggestions"] = suggestionList;
-            }
+            // Apply highlight for the current word
+            int globalStartIndex = text.indexOf(word) + startIndex;
+            if (globalStartIndex >= 0 && globalStartIndex + length <= text.length())
+                setFormat(globalStartIndex, length, _errorFormat);
         }
-        errors.append(errorInfo);
     }
-    return errors;
 }
-*/
+
 
 QString SpellChecker::getMisspelledWord(const QString &text, ULONG startIndex, ULONG length)
 {

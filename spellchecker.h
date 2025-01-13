@@ -22,7 +22,8 @@ protected:
     void highlightBlock(const QString &text) override;
 
 private:
-    //QVariantList checkSpelling(const QString &text);
+    void checkSpelling();
+    void highlightImmediateWords(const QString &text);
     QString getMisspelledWord(const QString &text, ULONG startIndex, ULONG length);
 
 private:
@@ -30,6 +31,7 @@ private:
     ComPtr<ISpellChecker> _spellChecker;
     BOOL _isSupported;
 
+    QString _currentText;
     QTextCharFormat _errorFormat;
 };
 #endif // SPELLCHECKER_H
