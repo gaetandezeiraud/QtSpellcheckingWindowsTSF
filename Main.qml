@@ -53,7 +53,9 @@ Window {
                     }
                 }
 
-                MenuSeparator {}
+                MenuSeparator {
+                    visible: suggestions.count > 0
+                }
 
                 MenuItem {
                     text: "Cut"
