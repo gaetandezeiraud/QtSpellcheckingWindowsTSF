@@ -24,7 +24,7 @@ SpellChecker::SpellChecker(QTextDocument *parent)
 
     // Set the error format for highlighting
     _errorFormat.setUnderlineStyle(QTextCharFormat::SingleUnderline); // SpellCheckUnderline doesn't work? Related to https://bugreports.qt.io/browse/QTBUG-46540?jql=project%20%3D%20QTBUG%20AND%20status%20%3D%20Open%20AND%20text%20~%20Underline ?
-    _errorFormat.setUnderlineColor(Qt::red); // Color also doesn't work
+    _errorFormat.setUnderlineColor(Qt::red); // https://bugreports.qt.io/browse/QTBUG-97495
 }
 
 SpellChecker::~SpellChecker()
